@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer
+  namespace: data-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: python:3.9
+        command: ["/bin/bash", "-c"]
+        args:
+          - >
+            pip install kafka-python &&
+            python -c '
+            from kafka import KafkaConsumer
+            import json
+            import time
+            
+            # Esperar a que Kafka esté disponible
+            time.sleep(30)
+            
+            # Configurar consumidor
+            consumer = KafkaConsumer(
+                "sales-data",
+                bootstrap_servers=["data-cluster-kafka-bootstrap.data-pipeline.svc.cluster.local:9092"],
+                auto_offset_reset="earliest",
+                group_id="sales-processor",
+                value_deserializer=lambda x: json.loads(x.decode("utf-8"))
+            )
+            
+            # Procesar mensajes
+            print("Iniciando consumidor...")
+            for message in consumer:
+                print(f"Procesando venta: {message.value}")
+                # Aquí implementaríamos la lógica de procesamiento real
+            ' 

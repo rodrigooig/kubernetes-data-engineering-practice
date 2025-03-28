@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-config
+  namespace: data-engineering
+data:
+  PRODUCER_INTERVAL: "5"
+  DATA_FILE: "/data/sample.txt"
+  MESSAGE: "Este es un dato de ejemplo generado cada 5 segundos" 

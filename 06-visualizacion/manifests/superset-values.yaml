@@ -1,0 +1,64 @@
+image:
+  repository: apache/superset
+  tag: latest
+  pullPolicy: IfNotPresent
+
+supersetNode:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+init:
+  adminUser:
+    username: admin
+    firstname: Admin
+    lastname: User
+    email: admin@example.com
+    password: admin
+
+service:
+  type: ClusterIP
+  port: 8088
+
+ingress:
+  enabled: false
+
+extraEnvs:
+  - name: SUPERSET_SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: superset-secret
+        key: SUPERSET_SECRET_KEY
+
+extraConfigs:
+  connections:
+    db_engine_specs.py: |
+      import os
+      
+      # Configuración de la base de datos de Superset
+      SQLALCHEMY_DATABASE_URI = 'sqlite:////var/lib/superset/superset.db'
+      
+      # Configuración de conexión a Trino
+      TRINO_HOST = os.environ.get("TRINO_HOST", "trino-coordinator")
+      TRINO_PORT = os.environ.get("TRINO_PORT", "8080")
+      TRINO_USER = os.environ.get("TRINO_USER", "admin")
+      TRINO_PASSWORD = os.environ.get("TRINO_PASSWORD", "admin")
+      
+      # Configuración de proveedores de bases de datos
+      PREFERRED_DATABASES = [
+          'trino',
+          'postgresql',
+          'mysql',
+      ]
+      
+      # Tiempo de espera de consulta (en segundos)
+      SQLLAB_TIMEOUT = 300
+      SUPERSET_WEBSERVER_TIMEOUT = 300
+      
+      # Configuración para permitir cargar ejemplos
+      LOAD_EXAMPLES = False 

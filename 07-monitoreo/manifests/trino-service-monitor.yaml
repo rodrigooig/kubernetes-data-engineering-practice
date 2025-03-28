@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: trino-monitor
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: trino-exporter
+  namespaceSelector:
+    matchNames:
+      - data-lakehouse
+  endpoints:
+  - port: metrics
+    interval: 15s 

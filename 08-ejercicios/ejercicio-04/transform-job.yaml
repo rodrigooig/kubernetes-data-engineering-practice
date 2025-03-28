@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: transform-data
+  namespace: ex-pipeline
+spec:
+  schedule: "5/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: transform
+            image: python:3.9
+            command: ["/bin/bash", "-c"]
+            args:
+            - >
+              pip install pandas numpy &&
+              python -c '
+              import pandas as pd
+              import numpy as np
+              import os
+              import glob
+              from datetime import datetime
+              
+              # Función para procesar los archivos
+              def process_files():
+                  # Buscar archivos sin procesar
+                  files = glob.glob("/data/raw/*.csv")
+                  if not files:
+                      print("No hay archivos para procesar")
+                      return
+                  
+                  # Crear directorio de procesados si no existe
+                  os.makedirs("/data/processed", exist_ok=True)
+                  os.makedirs("/data/raw/processed", exist_ok=True)
+                  
+                  # Procesar cada archivo
+                  for file in files:
+                      filename = os.path.basename(file)
+                      print(f"Procesando archivo: {filename}")
+                      
+                      # Leer datos
+                      df = pd.read_csv(file)
+                      
+                      # Simular transformaciones
+                      df["precio_descuento"] = df["precio"] * 0.9
+                      df["precio_impuesto"] = df["precio"] * 1.16
+                      
+                      # Agregar timestamp de procesamiento
+                      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                      processed_filename = f"processed_{filename.split(".")[0]}_{timestamp}.csv"
+                      
+                      # Guardar archivo procesado
+                      df.to_csv(f"/data/processed/{processed_filename}", index=False)
+                      
+                      # Mover archivo original a carpeta de procesados
+                      os.rename(file, f"/data/raw/processed/{filename}")
+                      
+                      print(f"Archivo procesado y guardado como: {processed_filename}")
+              
+              # Ejecutar procesamiento
+              process_files()
+              '
+            volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          restartPolicy: OnFailure
+          volumes:
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: etl-data 

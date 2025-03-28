@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-dags
+  namespace: data-pipeline
+data:
+  extract_load_sales.py: |
+    from datetime import datetime, timedelta
+    from airflow import DAG
+    from airflow.operators.python_operator import PythonOperator
+    from airflow.hooks.postgres_hook import PostgresHook
+    from airflow.providers.apache.kafka.hooks.producer import KafkaProducerHook
+    import json
+    
+    default_args = {
+        'owner': 'airflow',
+        'depends_on_past': False,
+        'start_date': datetime(2023, 1, 1),
+        'email_on_failure': False,
+        'email_on_retry': False,
+        'retries': 1,
+        'retry_delay': timedelta(minutes=5),
+    }
+    
+    # Definir DAG
+    dag = DAG(
+        'extract_load_sales',
+        default_args=default_args,
+        description='Extract sales data from PostgreSQL and load to Kafka',
+        schedule_interval=timedelta(hours=1),
+        catchup=False,
+    )
+    
+    def extract_sales():
+        # Conectar a PostgreSQL usando la conexión configurada
+        pg_hook = PostgresHook(postgres_conn_id='postgres_conn')
+        conn = pg_hook.get_conn()
+        cursor = conn.cursor()
+        
+        # Ejecutar consulta
+        cursor.execute("SELECT id, product_name, amount, sale_date FROM sales WHERE sale_date > NOW() - INTERVAL '1 hour'")
+        records = cursor.fetchall()
+        
+        # Convertir a formato deseado
+        result = []
+        for row in records:
+            result.append({
+                'id': row[0],
+                'product_name': row[1],
+                'amount': float(row[2]),
+                'sale_date': row[3].strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+        return result
+    
+    def load_to_kafka(**context):
+        # Obtener datos del paso anterior
+        ti = context['ti']
+        sales_data = ti.xcom_pull(task_ids='extract_sales_task')
+        
+        if not sales_data:
+            print("No hay datos para procesar")
+            return
+            
+        # Conectar a Kafka
+        kafka_hook = KafkaProducerHook(kafka_conn_id='kafka_conn')
+        producer = kafka_hook.get_producer()
+        
+        # Enviar cada registro como mensaje
+        for sale in sales_data:
+            producer.send(
+                'sales-data',
+                key=str(sale['id']).encode('utf-8'),
+                value=json.dumps(sale).encode('utf-8')
+            )
+            
+        producer.flush()
+        print(f"Enviados {len(sales_data)} registros a Kafka")
+    
+    # Definir tareas
+    extract_task = PythonOperator(
+        task_id='extract_sales_task',
+        python_callable=extract_sales,
+        dag=dag,
+    )
+    
+    load_task = PythonOperator(
+        task_id='load_to_kafka_task',
+        python_callable=load_to_kafka,
+        provide_context=True,
+        dag=dag,
+    )
+    
+    # Definir dependencias
+    extract_task >> load_task 

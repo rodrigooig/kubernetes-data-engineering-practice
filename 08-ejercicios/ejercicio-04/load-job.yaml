@@ -1,0 +1,86 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: load-data
+  namespace: ex-pipeline
+spec:
+  schedule: "7/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: load
+            image: python:3.9
+            command: ["/bin/bash", "-c"]
+            args:
+            - >
+              pip install pandas sqlalchemy psycopg2-binary &&
+              python -c '
+              import pandas as pd
+              import os
+              import glob
+              import json
+              from datetime import datetime
+              from sqlalchemy import create_engine
+              
+              # Simular carga a base de datos
+              def load_to_database():
+                  # Buscar archivos procesados
+                  files = glob.glob("/data/processed/*.csv")
+                  if not files:
+                      print("No hay archivos procesados para cargar")
+                      return
+                  
+                  # Crear directorio de cargados si no existe
+                  os.makedirs("/data/loaded", exist_ok=True)
+                  
+                  # Como no tenemos una base de datos real, simularemos la carga
+                  print("Simulando conexión a base de datos...")
+                  
+                  # En un caso real, haríamos algo como:
+                  # engine = create_engine("postgresql://user:password@postgres:5432/datadb")
+                  
+                  # Procesar cada archivo
+                  for file in files:
+                      filename = os.path.basename(file)
+                      print(f"Cargando archivo: {filename}")
+                      
+                      # Leer datos
+                      df = pd.read_csv(file)
+                      
+                      # Simular inserción en base de datos 
+                      print(f"Simulando INSERT de {len(df)} registros")
+                      
+                      # En un caso real, haríamos:
+                      # df.to_sql("tabla_ventas", engine, if_exists="append", index=False)
+                      
+                      # Registrar carga como un archivo JSON
+                      load_info = {
+                          "filename": filename,
+                          "records": len(df),
+                          "loaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                          "status": "success"
+                      }
+                      
+                      # Guardar registro de carga
+                      timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                      with open(f"/data/loaded/load_{timestamp}.json", "w") as f:
+                          json.dump(load_info, f)
+                      
+                      # Mover archivo procesado a carpeta de cargados
+                      os.rename(file, f"/data/loaded/{filename}")
+                      
+                      print(f"Archivo cargado con éxito: {filename}")
+              
+              # Ejecutar carga
+              load_to_database()
+              '
+            volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          restartPolicy: OnFailure
+          volumes:
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: etl-data 

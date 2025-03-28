@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-metrics-config
+  namespace: data-lakehouse
+data:
+  config.yaml: |
+    collectors:
+      - query_stats
+      - cluster_memory
+      - node_status
+    endpoint: http://trino-coordinator:8080
+    user: admin
+    password: admin
+    insecure: true
+    interval: 15
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-exporter
+  namespace: data-lakehouse
+  labels:
+    app: trino-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trino-exporter
+  template:
+    metadata:
+      labels:
+        app: trino-exporter
+    spec:
+      containers:
+      - name: trino-exporter
+        image: trinodb/trino-prometheus-exporter:latest
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/trino-metrics/config.yaml
+          subPath: config.yaml
+      volumes:
+      - name: config-volume
+        configMap:
+          name: trino-metrics-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino-exporter
+  namespace: data-lakehouse
+  labels:
+    app: trino-exporter
+spec:
+  ports:
+  - port: 9090
+    targetPort: 9090
+    name: metrics
+  selector:
+    app: trino-exporter 

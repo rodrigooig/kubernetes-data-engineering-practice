@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-producer
+  namespace: data-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-producer
+  template:
+    metadata:
+      labels:
+        app: data-producer
+    spec:
+      containers:
+      - name: producer
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            while true; do
+              echo "$MESSAGE - $(date)" >> $DATA_FILE;
+              echo "Data written to $DATA_FILE";
+              sleep $PRODUCER_INTERVAL;
+            done
+        env:
+        - name: PRODUCER_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: data-config
+              key: PRODUCER_INTERVAL
+        - name: DATA_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: data-config
+              key: DATA_FILE
+        - name: MESSAGE
+          valueFrom:
+            configMapKeyRef:
+              name: data-config
+              key: MESSAGE
+        volumeMounts:
+        - name: shared-data
+          mountPath: /data
+      volumes:
+      - name: shared-data
+        emptyDir: {} 

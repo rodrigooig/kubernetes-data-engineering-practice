@@ -1,0 +1,87 @@
+image:
+  repository: fluent/fluentd-kubernetes-daemonset
+  tag: v1.14.6-debian-elasticsearch7-1.1
+
+elasticsearch:
+  host: elasticsearch-master
+  port: 9200
+  logstashPrefix: fluentd
+  scheme: http
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 200Mi
+
+tolerations:
+- key: node-role.kubernetes.io/master
+  operator: Exists
+  effect: NoSchedule
+
+configMaps:
+  useDefaults:
+    containersInputConf: true
+    systemInputConf: true
+    outputConf: false
+  
+  output.conf: |
+    <match **>
+      @type elasticsearch
+      host "#{ENV['ELASTICSEARCH_HOST']}"
+      port "#{ENV['ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['ELASTICSEARCH_SCHEME'] || 'http'}"
+      logstash_format true
+      logstash_prefix "#{ENV['LOGSTASH_PREFIX'] || 'fluentd'}"
+      reconnect_on_error true
+      reload_connections false
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers
+        flush_thread_count 2
+        flush_interval 5s
+        chunk_limit_size 8M
+        queue_limit_length 256
+        retry_max_interval 30
+        retry_forever true
+      </buffer>
+    </match>
+
+  extraConfigMaps:
+    kafka-logs.conf: |
+      <source>
+        @type tail
+        path /var/log/containers/*kafka*.log
+        pos_file /var/log/kafka.log.pos
+        tag kubernetes.kafka.*
+        read_from_head true
+        <parse>
+          @type json
+          time_format %Y-%m-%dT%H:%M:%S.%NZ
+        </parse>
+      </source>
+      
+      <filter kubernetes.kafka.**>
+        @type kubernetes_metadata
+        @id filter_kube_metadata_kafka
+      </filter>
+        
+    trino-logs.conf: |
+      <source>
+        @type tail
+        path /var/log/containers/*trino*.log
+        pos_file /var/log/trino.log.pos
+        tag kubernetes.trino.*
+        read_from_head true
+        <parse>
+          @type json
+          time_format %Y-%m-%dT%H:%M:%S.%NZ
+        </parse>
+      </source>
+      
+      <filter kubernetes.trino.**>
+        @type kubernetes_metadata
+        @id filter_kube_metadata_trino
+      </filter> 

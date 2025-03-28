@@ -1,0 +1,33 @@
+mode: standalone
+
+rootUser: "minio"
+rootPassword: "minio123"
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+resources:
+  requests:
+    memory: 1Gi
+    cpu: 500m
+  limits:
+    memory: 2Gi
+    cpu: 1000m
+
+service:
+  type: ClusterIP
+
+consoleService:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+buckets:
+  - name: iceberg
+    policy: none
+    purge: false
+
+defaultBucket:
+  enabled: false 

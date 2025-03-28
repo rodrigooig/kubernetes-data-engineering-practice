@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: python-worker
+  namespace: ex-recursos
+spec:
+  containers:
+  - name: python
+    image: python:3.9
+    command: ["/bin/bash", "-c"]
+    args:
+    - >
+      python -c '
+      import time
+      import numpy as np
+      
+      # Simulación de carga de CPU intensa
+      print("Iniciando trabajo intensivo...")
+      while True:
+          # Crear y operar con matrices grandes
+          matrix_size = 1000
+          a = np.random.rand(matrix_size, matrix_size)
+          b = np.random.rand(matrix_size, matrix_size)
+          result = np.dot(a, b)
+          
+          print(f"Operación completada. Resultado shape: {result.shape}")
+          time.sleep(2)
+      '
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m" 

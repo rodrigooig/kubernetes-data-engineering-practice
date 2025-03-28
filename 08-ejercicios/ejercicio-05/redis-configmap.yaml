@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: ex-stateful
+data:
+  redis.conf: |
+    appendonly yes
+    protected-mode no
+    port 6379
+    dir /data 

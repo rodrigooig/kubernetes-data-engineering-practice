@@ -1,0 +1,22 @@
+config:
+  datasource:
+    host: postgresql.data-pipeline.svc.cluster.local
+    user: postgres
+    password: postgres
+    port: 5432
+    database: postgres
+    sslmode: disable
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  labels:
+    release: prometheus 

@@ -1,0 +1,41 @@
+# Archivos generados por el sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración de IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Directorios de dependencias
+node_modules/
+venv/
+.env/
+
+# Archivos generados
+*.log
+*.bak
+*.tmp
+
+# Archivos de configuración con credenciales
+*secrets.yaml
+*secret.yaml
+kubeconfig
+
+# Archivos de datos
+*.csv
+*.parquet
+*.avro
+
+# Directorios de cache
+.cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Helm charts
+.helm/
+
+# Archivos temporales de Kubernetes
+.kube/ 

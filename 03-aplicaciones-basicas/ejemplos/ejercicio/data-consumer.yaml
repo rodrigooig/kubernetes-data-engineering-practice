@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-consumer
+  namespace: data-engineering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-consumer
+  template:
+    metadata:
+      labels:
+        app: data-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            while true; do
+              if [ -f $DATA_FILE ]; then
+                echo "Reading from $DATA_FILE:";
+                tail -n 1 $DATA_FILE;
+              else
+                echo "Waiting for data...";
+              fi;
+              sleep 10;
+            done
+        env:
+        - name: DATA_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: data-config
+              key: DATA_FILE
+        volumeMounts:
+        - name: shared-data
+          mountPath: /data
+      volumes:
+      - name: shared-data
+        emptyDir: {} 
