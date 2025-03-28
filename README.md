@@ -60,8 +60,8 @@ El proyecto está organizado en los siguientes módulos:
 
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/kubernetes-data-engineering.git
-   cd kubernetes-data-engineering
+   git clone https://github.com/rodrigooig/kubernetes-data-engineering-practice.git
+   cd kubernetes-data-engineering-practice
    ```
 
 2. Sigue las instrucciones en el directorio [`01-introduccion`](./01-introduccion/README.md) para comenzar tu viaje de aprendizaje con Kubernetes para Data Engineering.
